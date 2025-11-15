@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/queries/ingest';
+const API_URL = 'https://query-manager-backend.onrender.com/api/queries/ingest';
 
 const QueryInputForm = ({ onQuerySubmitted }) => {
     const [rawText, setRawText] = useState('');
