@@ -61,7 +61,6 @@ const QueryDashboard = () => {
         });
         
         socket.on('queryUpdated', (updatedQuery) => {
-            console.log('Real-time query update received:', updatedQuery);
             setQueries(prevQueries => prevQueries.map(q => 
                 q._id === updatedQuery._id ? updatedQuery : q 
             ));
