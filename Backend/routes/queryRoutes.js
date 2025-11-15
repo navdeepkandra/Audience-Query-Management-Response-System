@@ -4,7 +4,7 @@ const Query = require('../models/Query');
 const axios = require('axios');
 const mongoose = require('mongoose');
 
-const CLASSIFICATION_API = 'http://localhost:5001/classify'; 
+const CLASSIFICATION_API = 'https://nlp-classifier.onrender.com/classify'; 
 
 
 router.get('/', async (req, res) => {

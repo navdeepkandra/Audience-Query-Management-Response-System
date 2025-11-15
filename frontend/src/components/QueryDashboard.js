@@ -3,8 +3,8 @@ import axios from 'axios';
 import io from 'socket.io-client';
 import QueryInputForm from './QueryInputForm'; 
 
-const API_URL = 'http://localhost:5000/api/queries';
-const SOCKET_URL = 'http://localhost:5000';
+const API_URL = 'https://query-manager-backend.onrender.com/api/queries';
+const SOCKET_URL = 'https://query-manager-backend.onrender.com';
 
 const MOCK_AGENTS = [
     { name: 'Agent Alpha', display: 'Agent Alpha' },
