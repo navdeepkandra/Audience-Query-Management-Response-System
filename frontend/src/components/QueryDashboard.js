@@ -57,7 +57,6 @@ const QueryDashboard = () => {
         fetchQueries();
 
         socket.on('newQuery', (newQuery) => {
-            console.log('Real-time new query received:', newQuery);
             setQueries(prevQueries => [newQuery, ...prevQueries]); 
         });
         
