@@ -4,12 +4,11 @@ const Query = require('../models/Query');
 const axios = require('axios');
 const mongoose = require('mongoose');
 
-const CLASSIFICATION_API = 'http://nlp-classifier/classify'; 
-
+const CLASSIFICATION_API = 'http://nlp-classifier:80/classify'; 
+const AXIOS_TIMEOUT_MS = 15000; 
 
 router.get('/', async (req, res) => {
     try {
-
         const queries = await Query.find().sort({ createdAt: -1 });
         res.json(queries);
     } catch (err) {
@@ -26,14 +25,15 @@ router.post('/ingest', async (req, res) => {
         return res.status(400).json({ msg: 'Raw text is required for query ingestion.' });
     }
 
-    
     let tags = [];
     let priority = 'Medium'; 
     
     try {
-        const nlpResponse = await axios.post(CLASSIFICATION_API, { text: rawText });
+        const nlpResponse = await axios.post(CLASSIFICATION_API, 
+            { text: rawText },
+            { timeout: AXIOS_TIMEOUT_MS }
+        );
         
-    
         tags = nlpResponse.data.tags && Array.isArray(nlpResponse.data.tags) 
                ? nlpResponse.data.tags 
                : ['Classification Failed'];
@@ -41,13 +41,12 @@ router.post('/ingest', async (req, res) => {
         priority = nlpResponse.data.priority || 'Medium'; 
 
     } catch (nlpError) {
-        console.error("Error calling NLP service. Defaulting tags/priority.", nlpError.message);
+        console.error("Error calling NLP service (TIMEOUT/NETWORK):", nlpError.message);
         tags = ['Classification Failed'];
         priority = 'Low';
     }
     
     try {
-
         const newQuery = new Query({
             sourceChannel,
             sourceId: sourceId || `${sourceChannel}_${Date.now()}`,
@@ -58,7 +57,6 @@ router.post('/ingest', async (req, res) => {
         });
         
         await newQuery.save();
-
 
         const io = req.app.get('socketio'); 
         io.emit('newQuery', newQuery); 
@@ -73,7 +71,6 @@ router.post('/ingest', async (req, res) => {
 
 
 router.post('/:id/update', async (req, res) => {
-
     const { status, assignedTo, action, details } = req.body; 
     const queryId = req.params.id;
 
@@ -88,7 +85,6 @@ router.post('/:id/update', async (req, res) => {
         const historyEntry = { action: action || 'Update', details: details || 'Status/Assignment change' };
         let updatedFields = {};
 
-        
         if (status && status !== query.status) {
             updatedFields.status = status;
             historyEntry.action = 'Status Changed';
@@ -98,8 +94,7 @@ router.post('/:id/update', async (req, res) => {
                 updatedFields['responseMetrics.firstResponseTime'] = timeDiff;
                 historyEntry.details += ` (First response time recorded: ${timeDiff.toFixed(2)}s)`;
             }
-            
-          
+         
             if (status === 'Resolved' && !query.responseMetrics.resolutionTime) {
                 const timeDiff = (Date.now() - query.createdAt.getTime()) / 1000;
                 updatedFields['responseMetrics.resolutionTime'] = timeDiff;
@@ -107,9 +102,8 @@ router.post('/:id/update', async (req, res) => {
             }
         }
         
-      
+
         if (assignedTo !== undefined && assignedTo !== query.assignedTo) {
-            
             
             const newAssignment = assignedTo || 'Unassigned'; 
 
@@ -120,11 +114,13 @@ router.post('/:id/update', async (req, res) => {
                 : `Unassigned`;
         }
         
+ 
         const updatedQuery = await Query.findByIdAndUpdate(
             queryId, 
             { $set: updatedFields, $push: { history: historyEntry } },
             { new: true, runValidators: true }
-        );
+        ); 
+
         
         const io = req.app.get('socketio');
         io.emit('queryUpdated', updatedQuery); 
